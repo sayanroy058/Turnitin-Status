@@ -8,6 +8,7 @@ Turnitin Maintenance Status Telegram Bot
 
 import asyncio
 import aiohttp
+import ssl
 import json
 import os
 from datetime import datetime
@@ -49,8 +50,19 @@ def save_subscribers():
 async def fetch_status():
     """Fetch current maintenance status from Turnitin."""
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(STATUS_URL, timeout=aiohttp.ClientTimeout(total=10)) as response:
+        # Create SSL context that doesn't verify certificates (for compatibility)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+        }
+        
+        async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
+            async with session.get(STATUS_URL, timeout=aiohttp.ClientTimeout(total=15)) as response:
                 if response.status == 200:
                     return await response.json()
                 else:
